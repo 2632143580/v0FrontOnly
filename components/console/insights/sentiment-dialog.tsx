@@ -66,7 +66,11 @@ export function SentimentDialog({
       try {
         setPhase('loading-model')
         setHint('正在取回情绪模型……')
-        const { pipeline } = await import('@huggingface/transformers')
+        const { pipeline, env } = await import('@huggingface/transformers')
+
+        // Hugging Face 官方 CDN 国内不通，改用镜像站取回模型权重
+        env.remoteHost = 'https://hf-mirror.com'
+        env.remotePathTemplate = '{model}/resolve/{revision}/{file}'
 
         if (!_pipe) {
           _pipe = await pipeline('sentiment-analysis', SENTIMENT_MODEL, {
