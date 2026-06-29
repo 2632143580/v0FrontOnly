@@ -6,6 +6,7 @@ import { EmptyState } from '../empty-state'
 import { MessageBubble } from './message-bubble'
 import { MessageInput } from './message-input'
 import { QuickActions } from './quick-actions'
+import { InsightActions } from '../insights/insight-actions'
 
 export function ChatPanel() {
   const { messages, messagesLoaded, sending, send } = useConsole()
@@ -39,9 +40,12 @@ export function ChatPanel() {
             与记忆轻声交谈
           </span>
         </div>
-        <span className="font-mono text-[11px] text-faint">
-          {messages.length > 0 ? `${messages.length} 条` : ''}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[11px] text-faint">
+            {messages.length > 0 ? `${messages.length} 条` : ''}
+          </span>
+          <InsightActions messages={messages} />
+        </div>
       </header>
 
       <div
