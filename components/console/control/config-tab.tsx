@@ -21,14 +21,14 @@ export function ConfigTab() {
 
   // 用后端值初始化草稿
   useEffect(() => {
-    if (!config) return
+    if (!config?.groups) return
     const init: Record<string, string> = {}
     for (const g of config.groups) for (const f of g.fields) init[f.key] = f.value
     setDrafts(init)
   }, [config])
 
   const changed = useMemo(() => {
-    if (!config) return {}
+    if (!config?.groups) return {}
     const out: Record<string, string> = {}
     for (const g of config.groups)
       for (const f of g.fields)
@@ -39,7 +39,7 @@ export function ConfigTab() {
 
   const dirty = Object.keys(changed).length > 0
 
-  if (!config) {
+  if (!config?.groups?.length) {
     return (
       <EmptyState
         variant="wave"
