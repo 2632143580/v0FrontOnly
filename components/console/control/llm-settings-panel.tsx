@@ -345,8 +345,8 @@ export function LlmSettingsPanel() {
         </div>
 
         {/* 工具调用区 */}
-
-
+        <div className="shrink-0">
+          <ToolCallStrip calls={toolCalls} />
         </div>
       </div>
 
