@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Download, Loader2, Save, Upload, Wrench } from 'lucide-react'
 import { useConsole } from '../console-provider'
 import { cn } from '@/lib/utils'
-import type { PersonaData, PersonaSettings } from '@/lib/console-types'
+import type { PersonaData } from '@/lib/console-types'
 
 /* ── 区段选择器 ── */
 
@@ -163,7 +163,14 @@ export function LlmSettingsPanel() {
     system_prompt: string
     evaluate_prompt: string
     summary_prompt: string
-  } | null>(null)
+  }>({
+    max_window: 20,
+    memory_rounds: 3,
+    system_prompt: '',
+    evaluate_prompt: '',
+    summary_prompt: '',
+  })
+  // ponytail: 初始化 drafts 为非 null，面板外壳始终可见，避免加载时布局跳动。
 
   const [expandedKey, setExpandedKey] = useState<string>('system')
 
@@ -183,7 +190,7 @@ export function LlmSettingsPanel() {
 
   // 变更检测
   const changed = useMemo(() => {
-    if (!persona || !drafts) return null
+    if (!persona) return null
     const ch: Partial<PersonaData> = {}
     const s = persona.settings
     if (drafts.max_window !== s.max_window || drafts.memory_rounds !== s.memory_rounds) {
@@ -236,15 +243,7 @@ export function LlmSettingsPanel() {
     e.target.value = ''
   }
 
-  if (!persona || !drafts) {
-    return (
-      <section className="glass flex min-h-0 flex-1 flex-col items-center justify-center rounded-2xl border border-border/50">
-        <span className="text-[13px] text-faint">
-          {personaLoaded ? '人设尚未就绪' : '正在读取人设...'}
-        </span>
-      </section>
-    )
-  }
+  const loading = !personaLoaded || !persona
 
   return (
     <section
@@ -258,7 +257,7 @@ export function LlmSettingsPanel() {
             对话设置
           </h2>
           <span className="text-[11px] tracking-quiet text-faint">
-            调节它如何记忆与回应
+            {loading ? '正在读取人设...' : '调节它如何记忆与回应'}
           </span>
         </div>
         <div className="flex items-center gap-1">
@@ -266,7 +265,13 @@ export function LlmSettingsPanel() {
             type="button"
             onClick={handleExport}
             title="导出人设"
-            className="lift rounded-lg p-1.5 text-faint hover:text-muted-foreground"
+            disabled={loading}
+            className={cn(
+              'lift rounded-lg p-1.5',
+              loading
+                ? 'text-faint/30 cursor-not-allowed'
+                : 'text-faint hover:text-muted-foreground',
+            )}
           >
             <Download className="h-3.5 w-3.5" />
           </button>
@@ -274,16 +279,25 @@ export function LlmSettingsPanel() {
             type="button"
             onClick={handleImport}
             title="导入人设"
-            className="lift rounded-lg p-1.5 text-faint hover:text-muted-foreground"
+            disabled={loading}
+            className={cn(
+              'lift rounded-lg p-1.5',
+              loading
+                ? 'text-faint/30 cursor-not-allowed'
+                : 'text-faint hover:text-muted-foreground',
+            )}
           >
             <Upload className="h-3.5 w-3.5" />
           </button>
-          <input ref={fileRef} type="file" accept=".json" onChange={handleFileChange} className="hidden" />
+          <input ref={fileRef} type="file" accept=".json" onChange={handleFileChange} className="hidden" disabled={loading} />
         </div>
       </header>
 
       {/* body -- 无 overflow，靠 flex 分配高度 */}
-      <div className="flex min-h-0 flex-1 flex-col gap-3 px-5 py-4">
+      <div className={cn(
+        'flex min-h-0 flex-1 flex-col gap-3 px-5 py-4 transition-opacity duration-300',
+        loading && 'pointer-events-none opacity-40',
+      )}>
         {/* 上下文区 */}
         <div className="flex flex-col gap-3 shrink-0">
           <SegmentedField
@@ -291,14 +305,14 @@ export function LlmSettingsPanel() {
             hint="保留最近 N 条消息作为上下文。越长越完整，但消耗更多 token"
             segments={WINDOW_SEGMENTS}
             value={drafts.max_window}
-            onChange={(v) => setDrafts((d) => (d ? { ...d, max_window: v } : d))}
+            onChange={(v) => setDrafts((d) => ({ ...d, max_window: v }))}
           />
           <SegmentedField
             label="记忆轮次"
             hint="每次对话带几轮历史（1 轮 = 一问一答）。'全部' 不限制"
             segments={ROUNDS_SEGMENTS}
             value={drafts.memory_rounds}
-            onChange={(v) => setDrafts((d) => (d ? { ...d, memory_rounds: v } : d))}
+            onChange={(v) => setDrafts((d) => ({ ...d, memory_rounds: v }))}
           />
         </div>
 
@@ -308,7 +322,7 @@ export function LlmSettingsPanel() {
             label="系统提示词 · 人设"
             hint="定义 AI 的角色、行为规则和工具决策策略。支持 {current_time} 占位符"
             value={drafts.system_prompt}
-            onChange={(v) => setDrafts((d) => (d ? { ...d, system_prompt: v } : d))}
+            onChange={(v) => setDrafts((d) => ({ ...d, system_prompt: v }))}
             expanded={expandedKey === 'system'}
             onToggle={() => setExpandedKey((k) => (k === 'system' ? '' : 'system'))}
           />
@@ -316,7 +330,7 @@ export function LlmSettingsPanel() {
             label="评估提示词"
             hint="控制自修正环节的判定规则。回复必须包含 SUFFICIENT 或 RETRY:原因"
             value={drafts.evaluate_prompt}
-            onChange={(v) => setDrafts((d) => (d ? { ...d, evaluate_prompt: v } : d))}
+            onChange={(v) => setDrafts((d) => ({ ...d, evaluate_prompt: v }))}
             expanded={expandedKey === 'evaluate'}
             onToggle={() => setExpandedKey((k) => (k === 'evaluate' ? '' : 'evaluate'))}
           />
@@ -324,15 +338,15 @@ export function LlmSettingsPanel() {
             label="摘要提示词"
             hint="控制对话摘要的生成方式。摘要帮助 AI 记住长期上下文"
             value={drafts.summary_prompt}
-            onChange={(v) => setDrafts((d) => (d ? { ...d, summary_prompt: v } : d))}
+            onChange={(v) => setDrafts((d) => ({ ...d, summary_prompt: v }))}
             expanded={expandedKey === 'summary'}
             onToggle={() => setExpandedKey((k) => (k === 'summary' ? '' : 'summary'))}
           />
         </div>
 
         {/* 工具调用区 */}
-        <div className="shrink-0">
-          <ToolCallStrip calls={toolCalls} />
+
+
         </div>
       </div>
 
